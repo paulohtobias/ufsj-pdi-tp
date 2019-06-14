@@ -1,6 +1,9 @@
+# -*- coding: utf-8 -*-
 import cv2
 import numpy as np
 import matplotlib.pyplot as plt
+import sys
+sys.setrecursionlimit(10000) #aumenta o tamanho da pilha de recursão
 
 bgr_img = cv2.imread('Imagens/2_10.jpg')
 kernel = np.ones((3,3),np.uint8)  # kernel para erode dilate
@@ -44,6 +47,27 @@ def resizePercent(img, scale_percent):
     height = int(img.shape[0] * scale_percent / 100)
     return cv2.resize(img, (width, height), interpolation = cv2.INTER_AREA)
 
+def bwLabelAux(img, label, rows, cols, i, j):
+    img[i][j] = label
+    for k in range(-1, 2):
+        for l in range(-1, 2):
+            if (i+k)>=0 and (i+k)<rows and (j+l)>=0 and (j+l)<cols:
+                if img[i+k][j+l] == -255:
+                    img = bwLabelAux(img, label, rows, cols, i+k, j+l)
+    return img
+
+#atribui um label para cada componente conectado
+def bwLabel(img):
+    rows, cols = img.shape
+    label = 0
+    for i in range(0, rows):
+        for j in range(0, cols):
+            if img[i][j] == -255:
+                label += 1
+                img = bwLabelAux(img, label, rows, cols, i, j)
+
+    return label, img
+
 bgr_img = resizePercent(bgr_img, 60)
 hsv = cv2.cvtColor(bgr_img, cv2.COLOR_BGR2HSV)
 H, S, V = cv2.split(hsv)
@@ -61,27 +85,13 @@ image = ~image                                                  # inverte as cor
 image = cv2.erode(image,kernel,iterations = 1)
 image = cv2.dilate(image,kernel,iterations = 1)
 
+qtddMoedas, image = bwLabel(image*(-1))
+
+for i in range(1, qtddMoedas+1):
+    moedaIsolada = np.uint8((image == i)*(255/i))
+    cv2.imshow('aperte espaço', moedaIsolada)
+    cv2.waitKey(0)
+
 print maxHisH, maxHisS, maxHisV
 
-cv2.imshow('original', bgr_img)
-cv2.imshow('binaria', image)
-cv2.waitKey(0)
-
 cv2.destroyAllWindows()
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-#
