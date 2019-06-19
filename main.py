@@ -3,7 +3,7 @@ import cv2
 import numpy as np
 import matplotlib.pyplot as plt
 import sys
-sys.setrecursionlimit(10000) #aumenta o tamanho da pilha de recursão
+sys.setrecursionlimit(100000) #aumenta o tamanho da pilha de recursão
 
 bgr_img = cv2.imread('Imagens/2_10.jpg')
 kernel = np.ones((3,3),np.uint8)  # kernel para erode dilate
@@ -88,10 +88,10 @@ image = cv2.dilate(image,kernel,iterations = 1)
 qtddMoedas, image = bwLabel(image*(-1))
 
 for i in range(1, qtddMoedas+1):
-    moedaIsolada = np.uint8((image == i)*(255/i))
-    cv2.imshow('aperte espaço', moedaIsolada)
+    moedaIsolada = np.uint8(image == i)*255
+    imgTmp = cv2.merge((moedaIsolada & H, moedaIsolada & S, moedaIsolada & V))
+    cv2.imshow('aperte espaço', imgTmp)
     cv2.waitKey(0)
 
 print maxHisH, maxHisS, maxHisV
-
 cv2.destroyAllWindows()
