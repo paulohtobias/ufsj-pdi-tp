@@ -5,7 +5,7 @@ import matplotlib.pyplot as plt
 import sys
 
 bgr_img = cv2.imread(sys.argv[1])
-kernel = np.ones((3,3),np.uint8)  # kernel para erode dilate
+kernel = cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (2,2))  # kernel para erode dilate
 margin_h = 250
 margin_s = 100
 margin_v = 60
@@ -40,7 +40,7 @@ def maxHis(histogram):
 
     return indMax
 
-#redimenciona a imagem
+#redimensiona a imagem
 def resizePercent(img, scale_percent):
     width = int(img.shape[1] * scale_percent / 100)
     height = int(img.shape[0] * scale_percent / 100)
@@ -67,7 +67,27 @@ def bwLabel(img):
 
     return label, img
 
+def averageFilter(img):
+    mask = [[1*(1/9)]*3]*3
+    b, g, r = cv2.split(img)
+    b_aux = g_aux = r_aux = np.zeros((img.shape[0], img.shape[1]))
+
+    for i in range(1, (img.shape[0]-1)):
+        for j in range(1, (img.shape[1]-1)):
+            for x in range(-len(mask)//2, len(mask)//2):
+                for y in range(-len(mask)//2, len(mask)//2):
+                    b_aux[i][j] += (mask[x+1][y+1] * b[i+x][j+y])
+                    g_aux[i][j] += (mask[x+1][y+1] * g[i+x][j+y])
+                    r_aux[i][j] += (mask[x+1][y+1] * r[i+x][j+y])
+
+    img = cv2.merge([b_aux, g_aux, r_aux])
+    img = np.array(img, dtype=np.uint8)
+    
+    return img
+
+
 bgr_img = resizePercent(bgr_img, 60)
+bgr_img = averageFilter(bgr_img)
 hsv = cv2.cvtColor(bgr_img, cv2.COLOR_BGR2HSV)
 H, S, V = cv2.split(hsv)
 
@@ -79,10 +99,10 @@ lower = np.array([maxHisH - margin_h, maxHisS - margin_s, maxHisV - margin_v])
 upper = np.array([maxHisH + margin_h, maxHisS + margin_s, maxHisV + margin_v])
 
 image = cv2.inRange(hsv, lower, upper)                          # filtra o fundo da imagem
-image = ~image                                                  # inverte as cores da imagem
+image = ~image                                                # inverte as cores da imagem
 
-image = cv2.erode(image,kernel,iterations = 1)
-image = cv2.dilate(image,kernel,iterations = 1)
+image = cv2.erode(image, kernel, iterations = 1)
+image = cv2.dilate(image, kernel, iterations = 1)
 
 qtddMoedas, image = bwLabel(image*(-1))
 
