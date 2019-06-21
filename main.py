@@ -87,7 +87,8 @@ def averageFilter(img):
 
 
 bgr_img = resizePercent(bgr_img, 60)
-bgr_img = averageFilter(bgr_img)
+#bgr_img = averageFilter(bgr_img)
+bgr_img = cv2.blur(bgr_img, (3,3))
 hsv = cv2.cvtColor(bgr_img, cv2.COLOR_BGR2HSV)
 H, S, V = cv2.split(hsv)
 
