@@ -3,9 +3,8 @@ import cv2
 import numpy as np
 import matplotlib.pyplot as plt
 import sys
-sys.setrecursionlimit(100000) #aumenta o tamanho da pilha de recursão
 
-bgr_img = cv2.imread('Imagens/2_10.jpg')
+bgr_img = cv2.imread(sys.argv[1])
 kernel = np.ones((3,3),np.uint8)  # kernel para erode dilate
 margin_h = 250
 margin_s = 100
@@ -47,24 +46,24 @@ def resizePercent(img, scale_percent):
     height = int(img.shape[0] * scale_percent / 100)
     return cv2.resize(img, (width, height), interpolation = cv2.INTER_AREA)
 
-def bwLabelAux(img, label, rows, cols, i, j):
-    img[i][j] = label
-    for k in range(-1, 2):
-        for l in range(-1, 2):
-            if (i+k)>=0 and (i+k)<rows and (j+l)>=0 and (j+l)<cols:
-                if img[i+k][j+l] == -255:
-                    img = bwLabelAux(img, label, rows, cols, i+k, j+l)
-    return img
-
 #atribui um label para cada componente conectado
 def bwLabel(img):
     rows, cols = img.shape
     label = 0
-    for i in range(0, rows):
-        for j in range(0, cols):
+
+    for i in range(rows):
+        for j in range(cols):
             if img[i][j] == -255:
                 label += 1
-                img = bwLabelAux(img, label, rows, cols, i, j)
+                img[i][j] = label
+                linked = [(i, j)]
+                while len(linked) > 0:
+                    u, v = linked.pop()
+                    for k in range(-1, 2):
+                        for l in range(-1, 2):
+                            if (u + k) >= 0 and (u + k) < rows and (v + l) >= 0 and (v + l) < cols and img[u + k][v + l] == -255:
+                                img[u + k][v + l] = label
+                                linked.append((u + k, v + l))
 
     return label, img
 
@@ -93,5 +92,5 @@ for i in range(1, qtddMoedas+1):
     cv2.imshow('aperte espaço', imgTmp)
     cv2.waitKey(0)
 
-print maxHisH, maxHisS, maxHisV
+print(maxHisH, maxHisS, maxHisV)
 cv2.destroyAllWindows()
