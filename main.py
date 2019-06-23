@@ -4,6 +4,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 from scipy.stats import gaussian_kde
 import sys
+import linear_map
 
 def printHis(histogram):
     plt.plot(histogram, color="black")
@@ -169,14 +170,35 @@ def cutPoints2(densityFunction):
     print(min, max)
     return min, max
 
-bgr_img = cv2.imread(sys.argv[1])
-kernel = cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (2,2))  # kernel para erode dilate
-bgr_img = resizeAbsolute(bgr_img, 360)
-#bgr_img = averageFilter(bgr_img, (5,5))
-bgr_img = cv2.blur(bgr_img, (3,3))
-hsv = cv2.cvtColor(bgr_img, cv2.COLOR_BGR2HSV)
-H, S, V = cv2.split(hsv)
+def imshow(img, title, cvt=cv2.COLOR_HSV2BGR):
+    if cvt is not None:
+        cv2.imshow(title, cv2.cvtColor(img, cvt))
+    else:
+        cv2.imshow(title, img)
+    cv2.waitKey(0)
 
+# Abre e redimensiona a imagem.
+bgr_img = cv2.imread(sys.argv[1])
+bgr_img = resizeAbsolute(bgr_img, 360)
+imshow(bgr_img, "original", None)
+
+# Filtro de média.
+#bgr_img = averageFilter(bgr_img, (5,5))
+bgr_img = cv2.blur(bgr_img, (7,7))
+imshow(bgr_img, 'média', None)
+
+# Conversão pra HSV.
+hsv = cv2.cvtColor(bgr_img, cv2.COLOR_BGR2HSV)
+
+# Mapeamento de componentes
+points_s = [linear_map.Point(48, 2)]
+points_v = [linear_map.Point(47, 217)]
+hsv = linear_map.LinearMap(1, points_s).map(hsv)
+hsv = linear_map.LinearMap(2, points_v).map(hsv)
+imshow(hsv, 'eq-sv')
+
+# Filtro de componentes
+H, S, V = cv2.split(hsv)
 minH, maxH = (0, 255)#cutPoints(getDensityFunction(H))
 minS, maxS = cutPoints(getDensityFunction(S))
 minV, maxV = cutPoints(getDensityFunction(V))
@@ -184,11 +206,13 @@ minV, maxV = cutPoints(getDensityFunction(V))
 image = cv2.inRange(hsv, np.array([minH, minS, minV]), np.array([maxH, maxS, maxV]))             # filtra o fundo da imagem
 image = ~image                                                # inverte as cores da imagem
 
+imshow(image, 'filtro-range', None)
+
+# Erosão e Dilatação
+kernel = cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (4,4))  # kernel para erode dilate
 image = cv2.erode(image, kernel, iterations = 1)
 image = cv2.dilate(image, kernel, iterations = 1)
-
-cv2.imshow('filtro do fundo', image)
-cv2.waitKey(0)
+imshow(image, 'erodil', None)
 
 qtddMoedas, image = bwLabel(image*(-1))
 
