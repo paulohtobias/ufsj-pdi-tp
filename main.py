@@ -37,7 +37,22 @@ def maxHis(histogram):
 def resizePercent(img, scale_percent):
     width = int(img.shape[1] * scale_percent / 100)
     height = int(img.shape[0] * scale_percent / 100)
-    return cv2.resize(img, (width, height), interpolation = cv2.INTER_AREA)
+    return cv2.resize(img, (width, height), interpolation=cv2.INTER_AREA)
+
+# redimensiona em tamanho absoluto.
+# axis = 0: value é a altura.
+# axis = 1: value é largura.
+def resizeAbsolute(img, value, axis=1):
+    width = img.shape[1]
+    height = img.shape[0]
+
+    ratio = value / img.shape[axis]
+
+    width = int(width * ratio)
+    height = int(height * ratio)
+
+    return cv2.resize(img, (width, height), interpolation=cv2.INTER_AREA)
+
 
 #atribui um label para cada componente conectado
 def bwLabel(img):
@@ -156,7 +171,7 @@ def cutPoints2(densityFunction):
 
 bgr_img = cv2.imread(sys.argv[1])
 kernel = cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (2,2))  # kernel para erode dilate
-bgr_img = resizePercent(bgr_img, 60)
+bgr_img = resizeAbsolute(bgr_img, 360)
 #bgr_img = averageFilter(bgr_img, (5,5))
 bgr_img = cv2.blur(bgr_img, (3,3))
 hsv = cv2.cvtColor(bgr_img, cv2.COLOR_BGR2HSV)
@@ -180,6 +195,7 @@ qtddMoedas, image = bwLabel(image*(-1))
 for i in range(1, qtddMoedas+1):
     moedaIsolada = np.uint8(image == i)*255
     imgTmp = cv2.merge((moedaIsolada & H, moedaIsolada & S, moedaIsolada & V))
+    imgTmp = cv2.cvtColor(imgTmp, cv2.COLOR_HSV2BGR) # volta para bgr pra poder exibir
     cv2.imshow('aperte espaço', imgTmp)
     cv2.waitKey(0)
 
