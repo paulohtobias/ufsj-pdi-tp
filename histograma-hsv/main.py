@@ -28,10 +28,19 @@ class Line():
 		return round(self.m * (x - self.x0) + self.y0)
 
 class JSONRequset(server.BaseHTTPRequestHandler):
-	def _set_response(self):
+	def _set_response(self, ct='text/json'):
 		self.send_response(200)
-		self.send_header('Content-type', 'text/json')
+		if ct is not None:
+			self.send_header('Content-type', ct)
 		self.end_headers()
+
+	def do_GET(self):
+		#content_length = int(self.headers['Content-Length'])  # <--- Gets the size of data
+		self._set_response(ct=None)
+		path = self.path if self.path != '/' else "/index.html"
+		print(path)
+		path = path[1:]
+		self.wfile.write(open(path, "rb").read())
 
 	def do_POST(self):
 		content_length = int(self.headers['Content-Length']) # <--- Gets the size of data
@@ -163,7 +172,7 @@ new_img_rgb = cv2.cvtColor(img_bgr, cv2.COLOR_BGR2RGB)
 
 with open("index.html", "w") as f:
 	template = open("index-template.html").read()
-	f.write(template % (image_name))
+	f.write(template)
 
 # Create a window
 window = tkinter.Tk()
@@ -173,6 +182,5 @@ tk_canvas.pack()
 
 update_img()
 
-#os.system("xdg-open index.html")
-print("Running server")
+print("Running server on http://localhost:4242")
 run()

@@ -5,9 +5,6 @@ import matplotlib.pyplot as plt
 from scipy.stats import gaussian_kde
 import sys
 
-bgr_img = cv2.imread(sys.argv[1])
-kernel = cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (2,2))  # kernel para erode dilate
-
 def printHis(histogram):
     plt.plot(histogram, color="black")
     plt.xticks([]), plt.yticks([])
@@ -29,11 +26,9 @@ def getHis(gray_img):
 
 #retorna o pico do histograma
 def maxHis(histogram):
-    max = histogram[0]
     indMax = 0
     for i in range(1, 256):
-        if histogram[i] > max:
-            max = histogram[i]
+        if histogram[i] > histogram[indMax]:
             indMax = i
 
     return indMax
@@ -65,23 +60,35 @@ def bwLabel(img):
 
     return label, img
 
-def averageFilter(img):
-    mask = [[1*(1/9)]*3]*3
-    b, g, r = cv2.split(img)
-    b_aux = g_aux = r_aux = np.zeros((img.shape[0], img.shape[1]))
+def averageFilter(img, mask_shape=(3, 3)):
+    def index(axis, offset, limit):
+        nv = axis + offset
+        if nv < 0:
+            return 0
+        elif nv >= limit:
+            return limit - 1
+        else:
+            return nv
 
-    for i in range(1, (img.shape[0]-1)):
-        for j in range(1, (img.shape[1]-1)):
-            for x in range(-len(mask)//2, len(mask)//2):
-                for y in range(-len(mask)//2, len(mask)//2):
-                    b_aux[i][j] += (mask[x+1][y+1] * b[i+x][j+y])
-                    g_aux[i][j] += (mask[x+1][y+1] * g[i+x][j+y])
-                    r_aux[i][j] += (mask[x+1][y+1] * r[i+x][j+y])
+    mask_w, mask_h = mask_shape
+    mask_rw = mask_w // 2
+    mask_rh = mask_h // 2
+    mask = [[1 / (mask_w * mask_h)] * mask_w] * mask_h
 
-    img = cv2.merge([b_aux, g_aux, r_aux])
-    img = np.array(img, dtype=np.uint8)
+    avg_img = np.zeros(img.shape)
 
-    return img
+    for i in range(img.shape[0]):
+        for j in range(img.shape[1]):
+            for x in range(-mask_rh, mask_rh + 1):
+                for y in range(-mask_rw, mask_rw + 1):
+                    ix = index(i, x, img.shape[0])
+                    jy = index(j, y, img.shape[1])
+
+                    avg_img[i][j] += (mask[x + mask_rh][y + mask_rw] * img[ix][jy])
+
+    avg_img = np.array(avg_img, dtype=np.uint8)
+
+    return avg_img
 
 # Baseado em: https://stackoverflow.com/questions/4150171/how-to-create-a-density-plot-in-matplotlib
 def getDensityFunction(gray_img):
@@ -97,7 +104,7 @@ def getDensityFunction(gray_img):
     for i in range(0, 256):
         xs += [i]
 
-    density.covariance_factor = lambda : 1.3
+    density.covariance_factor = lambda : 1.0
     density._compute_covariance()
     return density(xs)
 
@@ -121,7 +128,7 @@ def cutPoints(densityFunction):
             break
         lastTan = tan
 
-    print min, max
+    print(min, max)
     return min, max
 
 def cutPoints2(densityFunction):
@@ -144,16 +151,18 @@ def cutPoints2(densityFunction):
             break
         lastTan = tan
 
-    print min, max
+    print(min, max)
     return min, max
 
+bgr_img = cv2.imread(sys.argv[1])
+kernel = cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (2,2))  # kernel para erode dilate
 bgr_img = resizePercent(bgr_img, 60)
-#bgr_img = averageFilter(bgr_img)
+#bgr_img = averageFilter(bgr_img, (5,5))
 bgr_img = cv2.blur(bgr_img, (3,3))
 hsv = cv2.cvtColor(bgr_img, cv2.COLOR_BGR2HSV)
 H, S, V = cv2.split(hsv)
 
-minH, maxH = cutPoints(getDensityFunction(H))
+minH, maxH = (0, 255)#cutPoints(getDensityFunction(H))
 minS, maxS = cutPoints(getDensityFunction(S))
 minV, maxV = cutPoints(getDensityFunction(V))
 
