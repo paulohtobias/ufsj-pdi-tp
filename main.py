@@ -147,29 +147,6 @@ def cutPoints(densityFunction):
     print(min, max)
     return min, max
 
-def cutPoints2(densityFunction):
-    pico = maxHis(densityFunction)
-    min, max = 0, 255
-
-    lastTan = 0
-    for i in range(pico, 255):
-        tan = (densityFunction[i] - densityFunction[i+1])
-        if tan <= lastTan:
-            max = i
-            break
-        lastTan = tan
-
-    lastTan = 0
-    for i in range(pico, 0, -1):
-        tan = (densityFunction[i] - densityFunction[i-1])
-        if tan <= lastTan:
-            min = i
-            break
-        lastTan = tan
-
-    print(min, max)
-    return min, max
-
 def imshow(img, title, cvt=cv2.COLOR_HSV2BGR):
     if cvt is not None:
         cv2.imshow(title, cv2.cvtColor(img, cvt))
