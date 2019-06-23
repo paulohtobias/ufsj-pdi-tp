@@ -2,13 +2,11 @@
 import cv2
 import numpy as np
 import matplotlib.pyplot as plt
+from scipy.stats import gaussian_kde
 import sys
 
 bgr_img = cv2.imread(sys.argv[1])
 kernel = cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (2,2))  # kernel para erode dilate
-margin_h = 250
-margin_s = 100
-margin_v = 60
 
 def printHis(histogram):
     plt.plot(histogram, color="black")
@@ -82,9 +80,72 @@ def averageFilter(img):
 
     img = cv2.merge([b_aux, g_aux, r_aux])
     img = np.array(img, dtype=np.uint8)
-    
+
     return img
 
+# Baseado em: https://stackoverflow.com/questions/4150171/how-to-create-a-density-plot-in-matplotlib
+def getDensityFunction(gray_img):
+    width, height = gray_img.shape
+    data = []
+
+    for j in range(0, width):
+        for i in range(0, height):
+            data += [gray_img[j][i]]
+
+    density = gaussian_kde(data)
+    xs = []
+    for i in range(0, 256):
+        xs += [i]
+
+    density.covariance_factor = lambda : 1.3
+    density._compute_covariance()
+    return density(xs)
+
+def cutPoints(densityFunction):
+    pico = maxHis(densityFunction)
+    min, max = 0, 255
+
+    lastTan = 0
+    for i in range(pico, 255):
+        tan = (densityFunction[i] - densityFunction[i+1])
+        if tan <= lastTan:
+            max = i
+            break
+        lastTan = tan
+
+    lastTan = 0
+    for i in range(pico, 0, -1):
+        tan = (densityFunction[i] - densityFunction[i-1])
+        if tan <= lastTan:
+            min = i
+            break
+        lastTan = tan
+
+    print min, max
+    return min, max
+
+def cutPoints2(densityFunction):
+    pico = maxHis(densityFunction)
+    min, max = 0, 255
+
+    lastTan = 0
+    for i in range(pico, 255):
+        tan = (densityFunction[i] - densityFunction[i+1])
+        if tan <= lastTan:
+            max = i
+            break
+        lastTan = tan
+
+    lastTan = 0
+    for i in range(pico, 0, -1):
+        tan = (densityFunction[i] - densityFunction[i-1])
+        if tan <= lastTan:
+            min = i
+            break
+        lastTan = tan
+
+    print min, max
+    return min, max
 
 bgr_img = resizePercent(bgr_img, 60)
 #bgr_img = averageFilter(bgr_img)
@@ -92,18 +153,18 @@ bgr_img = cv2.blur(bgr_img, (3,3))
 hsv = cv2.cvtColor(bgr_img, cv2.COLOR_BGR2HSV)
 H, S, V = cv2.split(hsv)
 
-maxHisH = maxHis(getHis(H))
-maxHisS = maxHis(getHis(S))
-maxHisV = maxHis(getHis(V))
+minH, maxH = cutPoints(getDensityFunction(H))
+minS, maxS = cutPoints(getDensityFunction(S))
+minV, maxV = cutPoints(getDensityFunction(V))
 
-lower = np.array([maxHisH - margin_h, maxHisS - margin_s, maxHisV - margin_v])
-upper = np.array([maxHisH + margin_h, maxHisS + margin_s, maxHisV + margin_v])
-
-image = cv2.inRange(hsv, lower, upper)                          # filtra o fundo da imagem
+image = cv2.inRange(hsv, np.array([minH, minS, minV]), np.array([maxH, maxS, maxV]))             # filtra o fundo da imagem
 image = ~image                                                # inverte as cores da imagem
 
 image = cv2.erode(image, kernel, iterations = 1)
 image = cv2.dilate(image, kernel, iterations = 1)
+
+cv2.imshow('filtro do fundo', image)
+cv2.waitKey(0)
 
 qtddMoedas, image = bwLabel(image*(-1))
 
@@ -113,5 +174,4 @@ for i in range(1, qtddMoedas+1):
     cv2.imshow('aperte espaço', imgTmp)
     cv2.waitKey(0)
 
-print(maxHisH, maxHisS, maxHisV)
 cv2.destroyAllWindows()
