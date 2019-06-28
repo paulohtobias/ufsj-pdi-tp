@@ -5,6 +5,7 @@ import matplotlib.pyplot as plt
 from scipy.stats import gaussian_kde
 import sys
 import linear_map
+import moeda
 
 def printHis(histogram):
     plt.plot(histogram, color="black")
@@ -171,14 +172,14 @@ def synthetic_removeBackground(img):
     s = img[0][0][1]
     v = img[0][0][2]
 
-    return ~cv2.inRange(img, np.array([h-6, s-6, v-6]), np.array([h+6, s+6, v+6]))
+    return ~cv2.inRange(img, np.array([h-1, s-1, v-1]), np.array([h+1, s+1, v+1]))
 
 # Abre e redimensiona a imagem.
 bgr_img = cv2.imread(sys.argv[1])
 bgr_img = resizeAbsolute(bgr_img, 360)
 #imshow(bgr_img, "original", None)
 
-bgr_img = averageFilter(bgr_img, (3,3))
+#bgr_img = averageFilter(bgr_img, (3,3))
 imshow(bgr_img, 'média', None)
 
 # Conversão pra HSV.
@@ -190,14 +191,19 @@ imshow(image, 'filtro-range', None)
 
 # Erosão e Dilatação
 kernel = cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (4,4))  # kernel para erode dilate
-image = cv2.erode(image, kernel, iterations = 1)
-image = cv2.dilate(image, kernel, iterations = 1)
+image = cv2.erode(image, kernel, iterations = 5)
+#image = cv2.dilate(image, kernel, iterations = 1)
 imshow(image, 'erodil', None)
 
-qtddMoedas, image = bwLabel(image*(-1))
+qtddMoedas, image = bwLabel(image * (-1))
+
+# Detecção de cores
+moedas = [
+    moeda.Moeda(10, moeda.CorMoeda('hsv', [10, 75, 130], alcance=[8, 55, 100]))
+]
 
 for i in range(1, qtddMoedas+1):
-    moedaIsolada = np.uint8(image == i)*255
+    moedaIsolada = np.uint8(image == i) * 255
     imgTmp = cv2.merge((moedaIsolada & H, moedaIsolada & S, moedaIsolada & V))
     imgTmp = cv2.cvtColor(imgTmp, cv2.COLOR_HSV2BGR) # volta para bgr pra poder exibir
     cv2.imshow('aperte espaço', imgTmp)

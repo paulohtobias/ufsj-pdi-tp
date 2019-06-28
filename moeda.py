@@ -6,7 +6,7 @@ class Limiar():
 		self.max = np.array(max, dtype=np.uint8)
 
 class CorMoeda:
-	def set_limiar(self, espaco, valor, **kwargs):
+	def __init__(self, espaco, valor, **kwargs):
 		try:
 			alcance = kwargs['alcance']
 			minimo = [v - a for v, a in zip(valor, alcance)]
@@ -15,3 +15,8 @@ class CorMoeda:
 			minimo = [v - m for v, m in zip(valor, kwargs['min'])]
 			maximo = [v + m for v, m in zip(valor, kwargs['max'])]
 		self.__dict__[espaco] = Limiar(minimo, maximo)
+
+class Moeda:
+	def __init__(self, valor, cor):
+		self.valor = valor
+		self.cor = cor
