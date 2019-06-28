@@ -47,7 +47,7 @@ def resizeAbsolute(img, value, axis=1):
     width = img.shape[1]
     height = img.shape[0]
 
-    ratio = value / img.shape[axis]
+    ratio = float(value) / img.shape[axis]
 
     width = int(width * ratio)
     height = int(height * ratio)
@@ -89,7 +89,7 @@ def averageFilter(img, mask_shape=(3, 3)):
     mask_w, mask_h = mask_shape
     mask_rw = mask_w // 2
     mask_rh = mask_h // 2
-    mask = [[1 / (mask_w * mask_h)] * mask_w] * mask_h
+    mask = [[1.0 / (mask_w * mask_h)] * mask_w] * mask_h
 
     avg_img = np.zeros(img.shape)
 
@@ -144,7 +144,6 @@ def cutPoints(densityFunction):
             break
         lastTan = tan
 
-    print(min, max)
     return min, max
 
 def imshow(img, title, cvt=cv2.COLOR_HSV2BGR):
@@ -154,35 +153,39 @@ def imshow(img, title, cvt=cv2.COLOR_HSV2BGR):
         cv2.imshow(title, img)
     cv2.waitKey(0)
 
+def natural_removeBackground(img):
+    points_s = [linear_map.Point(48, 2)]
+    points_v = [linear_map.Point(47, 217)]
+    hsv = linear_map.LinearMap(1, points_s).map(img)
+    hsv = linear_map.LinearMap(2, points_v).map(hsv)
+
+    H, S, V = cv2.split(hsv)
+    minH, maxH = (0, 255)#cutPoints(getDensityFunction(H))
+    minS, maxS = cutPoints(getDensityFunction(S))
+    minV, maxV = cutPoints(getDensityFunction(V))
+
+    return ~cv2.inRange(hsv, np.array([minH, minS, minV]), np.array([maxH, maxS, maxV]))             # filtra o fundo da imagem
+
+def synthetic_removeBackground(img):
+    h = img[0][0][0]
+    s = img[0][0][1]
+    v = img[0][0][2]
+
+    return ~cv2.inRange(img, np.array([h-6, s-6, v-6]), np.array([h+6, s+6, v+6]))
+
 # Abre e redimensiona a imagem.
 bgr_img = cv2.imread(sys.argv[1])
 bgr_img = resizeAbsolute(bgr_img, 360)
-imshow(bgr_img, "original", None)
+#imshow(bgr_img, "original", None)
 
-# Filtro de média.
-#bgr_img = averageFilter(bgr_img, (5,5))
-bgr_img = cv2.blur(bgr_img, (7,7))
+bgr_img = averageFilter(bgr_img, (3,3))
 imshow(bgr_img, 'média', None)
 
 # Conversão pra HSV.
 hsv = cv2.cvtColor(bgr_img, cv2.COLOR_BGR2HSV)
 
-# Mapeamento de componentes
-points_s = [linear_map.Point(48, 2)]
-points_v = [linear_map.Point(47, 217)]
-hsv = linear_map.LinearMap(1, points_s).map(hsv)
-hsv = linear_map.LinearMap(2, points_v).map(hsv)
-imshow(hsv, 'eq-sv')
-
-# Filtro de componentes
 H, S, V = cv2.split(hsv)
-minH, maxH = (0, 255)#cutPoints(getDensityFunction(H))
-minS, maxS = cutPoints(getDensityFunction(S))
-minV, maxV = cutPoints(getDensityFunction(V))
-
-image = cv2.inRange(hsv, np.array([minH, minS, minV]), np.array([maxH, maxS, maxV]))             # filtra o fundo da imagem
-image = ~image                                                # inverte as cores da imagem
-
+image = synthetic_removeBackground(hsv)
 imshow(image, 'filtro-range', None)
 
 # Erosão e Dilatação
