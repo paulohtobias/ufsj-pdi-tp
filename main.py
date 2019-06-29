@@ -6,7 +6,7 @@ from scipy.stats import gaussian_kde
 import sys
 import linear_map
 import components as cp
-import moeda
+import moeda as md
 
 def printHis(histogram):
     plt.plot(histogram, color="black")
@@ -56,35 +56,6 @@ def resizeAbsolute(img, value, axis=1):
 
     return cv2.resize(img, (width, height), interpolation=cv2.INTER_AREA)
 
-
-#atribui um label para cada componente conectado
-def getComponents(img_mask, img_color):
-    rows, cols = img_mask.shape
-    components = []
-
-    for i in range(rows):
-        for j in range(cols):
-            if img_mask[i][j] == -255:
-                component = cp.Component(img_color.shape)
-                components.append(component)
-
-                img_mask[i][j] = component.label
-                linked = [(i, j)]
-                component.add_pixel(i, j, img_color[i][j])
-                while len(linked) > 0:
-                    u, v = linked.pop()
-                    for k in range(-1, 2):
-                        for l in range(-1, 2):
-                            if (u + k) >= 0 and (u + k) < rows and (v + l) >= 0 and (v + l) < cols and img_mask[u + k][v + l] == -255:
-                                img_mask[u + k][v + l] = component.label
-                                linked.append((u + k, v + l))
-                                component.add_pixel(u+k, v+l, img_color[u + k][v + l])
-
-
-                component.crop()
-
-    return components
-
 def averageFilter(img, mask_shape=(3, 3)):
     def index(axis, offset, limit):
         nv = axis + offset
@@ -100,7 +71,7 @@ def averageFilter(img, mask_shape=(3, 3)):
     mask_rh = mask_h // 2
 
     avg_img = np.zeros(img.shape)
-    
+
     for i in range(img.shape[0]):
         for j in range(img.shape[1]):
             cont = np.zeros(3)
@@ -114,7 +85,7 @@ def averageFilter(img, mask_shape=(3, 3)):
                         if img[ix][jy][channel] != 0:
                             sum[channel] += img[ix][jy][channel]
                             cont[channel] += 1
-            
+
             for channel in range(0, 3):
                 if cont[channel] != 0:
                     avg_img[i][j][channel] = sum[channel]/cont[channel]
@@ -165,7 +136,9 @@ def cutPoints(densityFunction):
 
     return min, max
 
-def imshow(img, title, cvt=cv2.COLOR_HSV2BGR):
+def imshow(img, title, cvt=cv2.COLOR_HSV2BGR, skip=True):
+    if skip:
+        return
     if cvt is not None:
         cv2.imshow(title, cv2.cvtColor(img, cvt))
     else:
@@ -204,7 +177,6 @@ if __name__ == "__main__":
     # Conversão pra HSV.
     hsv = cv2.cvtColor(bgr_img, cv2.COLOR_BGR2HSV)
 
-    H, S, V = cv2.split(hsv)
     image = synthetic_removeBackground(hsv)
     imshow(image, 'filtro-range', None)
 
@@ -214,18 +186,9 @@ if __name__ == "__main__":
     image = cv2.dilate(image, kernel, iterations = 4)
     imshow(image, 'erodil', None)
 
-    components = getComponents(image * -1, hsv)
+    components = sorted(cp.getComponents(image * -1, hsv), key=lambda c: c.area, reverse=True)
 
-    #teste dos limiares. Remover depois
-    imagemMedia = averageFilter(cv2.merge([H & image, S & image, V & image]), (7,7))
-    imshow(cv2.inRange(imagemMedia, moeda.moedas[1].cor.hsv.min, moeda.moedas[1].cor.hsv.max), 'bronze', None)
-    imshow(cv2.inRange(imagemMedia, moeda.moedas[0].cor.hsv.min, moeda.moedas[0].cor.hsv.max), 'prata', None)
-    
     for component in components:
-        moedaIsolada = component.pixels
-        imshow(moedaIsolada, 'aperte espaço')
-        #h, s, v = cv2.split(moedaIsolada)
-        #printHis(getHis(v))
-        #cv2.waitKey(0)
+        print(component)
 
     cv2.destroyAllWindows()

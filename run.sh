@@ -7,8 +7,9 @@ IMGS="$(ls Imagens | egrep *.jpg)"
 
 run()
 {
-	echo $@
+	echo $3
 	$@
+	echo ""
 }
 
 if [ $1 ]; then

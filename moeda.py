@@ -17,11 +17,11 @@ class CorMoeda:
 		self.__dict__[espaco] = Limiar(minimo, maximo)
 
 class Moeda:
-	def __init__(self, valor, cor):
-		self.valor = valor
-		self.cor = cor
+	def __init__(self, prata, bronze):
+		self.valor = 0.0
 
-moedas = [
-	Moeda(50, CorMoeda('hsv', [48, 30, 100], alcance=[30, 29, 50])),
-	Moeda(25, CorMoeda('hsv', [24, 135, 135], alcance=[15, 85, 85]))
-]
+	def __str__(self):
+		return "R$%.2f" % (self.valor / 100.0)
+
+prata = CorMoeda('hsv', [48, 30, 100], alcance=[30, 29, 50])
+bronze = CorMoeda('hsv', [24, 135, 135], alcance=[15, 85, 85])
