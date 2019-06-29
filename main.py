@@ -5,6 +5,7 @@ import matplotlib.pyplot as plt
 from scipy.stats import gaussian_kde
 import sys
 import linear_map
+import components as cp
 import moeda
 
 def printHis(histogram):
@@ -57,25 +58,32 @@ def resizeAbsolute(img, value, axis=1):
 
 
 #atribui um label para cada componente conectado
-def bwLabel(img):
-    rows, cols = img.shape
-    label = 0
+def getComponents(img_mask, img_color):
+    rows, cols = img_mask.shape
+    components = []
 
     for i in range(rows):
         for j in range(cols):
-            if img[i][j] == -255:
-                label += 1
-                img[i][j] = label
+            if img_mask[i][j] == -255:
+                component = cp.Component(img_color.shape)
+                components.append(component)
+
+                img_mask[i][j] = component.label
                 linked = [(i, j)]
+                component.add_pixel(i, j, img_color[i][j])
                 while len(linked) > 0:
                     u, v = linked.pop()
                     for k in range(-1, 2):
                         for l in range(-1, 2):
-                            if (u + k) >= 0 and (u + k) < rows and (v + l) >= 0 and (v + l) < cols and img[u + k][v + l] == -255:
-                                img[u + k][v + l] = label
+                            if (u + k) >= 0 and (u + k) < rows and (v + l) >= 0 and (v + l) < cols and img_mask[u + k][v + l] == -255:
+                                img_mask[u + k][v + l] = component.label
                                 linked.append((u + k, v + l))
+                                component.add_pixel(u, v, img_color[u + k][v + l])
 
-    return label, img
+
+                component.crop()
+
+    return components
 
 def averageFilter(img, mask_shape=(3, 3)):
     def index(axis, offset, limit):
@@ -174,39 +182,36 @@ def synthetic_removeBackground(img):
 
     return ~cv2.inRange(img, np.array([h-1, s-1, v-1]), np.array([h+1, s+1, v+1]))
 
-# Abre e redimensiona a imagem.
-bgr_img = cv2.imread(sys.argv[1])
-bgr_img = resizeAbsolute(bgr_img, 360)
-#imshow(bgr_img, "original", None)
+if __name__ == "__main__":
+    # Abre e redimensiona a imagem.
+    bgr_img = cv2.imread(sys.argv[1])
+    bgr_img = resizeAbsolute(bgr_img, 360)
+    #imshow(bgr_img, "original", None)
 
-#bgr_img = averageFilter(bgr_img, (3,3))
-imshow(bgr_img, 'média', None)
+    #bgr_img = averageFilter(bgr_img, (3,3))
+    imshow(bgr_img, 'média', None)
 
-# Conversão pra HSV.
-hsv = cv2.cvtColor(bgr_img, cv2.COLOR_BGR2HSV)
+    # Conversão pra HSV.
+    hsv = cv2.cvtColor(bgr_img, cv2.COLOR_BGR2HSV)
 
-H, S, V = cv2.split(hsv)
-image = synthetic_removeBackground(hsv)
-imshow(image, 'filtro-range', None)
+    H, S, V = cv2.split(hsv)
+    image = synthetic_removeBackground(hsv)
+    imshow(image, 'filtro-range', None)
 
-# Erosão e Dilatação
-kernel = cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (4,4))  # kernel para erode dilate
-image = cv2.erode(image, kernel, iterations = 5)
-#image = cv2.dilate(image, kernel, iterations = 1)
-imshow(image, 'erodil', None)
+    # Erosão e Dilatação
+    kernel = cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (4,4))  # kernel para erode dilate
+    image = cv2.erode(image, kernel, iterations = 5)
+    #image = cv2.dilate(image, kernel, iterations = 1)
+    imshow(image, 'erodil', None)
 
-qtddMoedas, image = bwLabel(image * (-1))
+    components = getComponents(image * -1, hsv)
 
-# Detecção de cores
-moedas = [
-    moeda.Moeda(10, moeda.CorMoeda('hsv', [10, 75, 130], alcance=[8, 55, 100]))
-]
+    for component in components:
+        moedaIsolada = component.pixels
+        imgTmp = moedaIsolada
+        #imgTmp = cv2.merge((moedaIsolada & H, moedaIsolada & S, moedaIsolada & V))
+        #imgTmp = cv2.cvtColor(imgTmp, cv2.COLOR_HSV2BGR) # volta para bgr pra poder exibir
+        imshow(imgTmp, 'aperte espaço')
+        #cv2.waitKey(0)
 
-for i in range(1, qtddMoedas+1):
-    moedaIsolada = np.uint8(image == i) * 255
-    imgTmp = cv2.merge((moedaIsolada & H, moedaIsolada & S, moedaIsolada & V))
-    imgTmp = cv2.cvtColor(imgTmp, cv2.COLOR_HSV2BGR) # volta para bgr pra poder exibir
-    cv2.imshow('aperte espaço', imgTmp)
-    cv2.waitKey(0)
-
-cv2.destroyAllWindows()
+    cv2.destroyAllWindows()

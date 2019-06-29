@@ -20,3 +20,7 @@ class Moeda:
 	def __init__(self, valor, cor):
 		self.valor = valor
 		self.cor = cor
+
+moedas = [
+	moeda.Moeda(10, moeda.CorMoeda('hsv', [10, 75, 130], alcance=[8, 55, 100]))
+]
