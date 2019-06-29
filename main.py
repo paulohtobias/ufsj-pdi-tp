@@ -98,18 +98,28 @@ def averageFilter(img, mask_shape=(3, 3)):
     mask_w, mask_h = mask_shape
     mask_rw = mask_w // 2
     mask_rh = mask_h // 2
-    mask = [[1.0 / (mask_w * mask_h)] * mask_w] * mask_h
 
     avg_img = np.zeros(img.shape)
-
+    
     for i in range(img.shape[0]):
         for j in range(img.shape[1]):
+            cont = np.zeros(3)
+            sum = np.zeros(3)
             for x in range(-mask_rh, mask_rh + 1):
                 for y in range(-mask_rw, mask_rw + 1):
                     ix = index(i, x, img.shape[0])
                     jy = index(j, y, img.shape[1])
 
-                    avg_img[i][j] += (mask[x + mask_rh][y + mask_rw] * img[ix][jy])
+                    for channel in range(0, 3):
+                        if img[ix][jy][channel] != 0:
+                            sum[channel] += img[ix][jy][channel]
+                            cont[channel] += 1
+            
+            for channel in range(0, 3):
+                if cont[channel] != 0:
+                    avg_img[i][j][channel] = sum[channel]/cont[channel]
+                else:
+                    avg_img[i][j][channel] = 0
 
     avg_img = np.array(avg_img, dtype=np.uint8)
 
@@ -201,16 +211,21 @@ if __name__ == "__main__":
     # Erosão e Dilatação
     kernel = cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (3,3))  # kernel para erode dilate
     image = cv2.erode(image, kernel, iterations = 5)
-    image = cv2.dilate(image, kernel, iterations = 5)
+    image = cv2.dilate(image, kernel, iterations = 4)
     imshow(image, 'erodil', None)
 
     components = getComponents(image * -1, hsv)
 
+    #teste dos limiares. Remover depois
+    imagemMedia = averageFilter(cv2.merge([H & image, S & image, V & image]), (7,7))
+    imshow(cv2.inRange(imagemMedia, moeda.moedas[1].cor.hsv.min, moeda.moedas[1].cor.hsv.max), 'bronze', None)
+    imshow(cv2.inRange(imagemMedia, moeda.moedas[0].cor.hsv.min, moeda.moedas[0].cor.hsv.max), 'prata', None)
+    
     for component in components:
         moedaIsolada = component.pixels
         imshow(moedaIsolada, 'aperte espaço')
-        h, s, v = cv2.split(moedaIsolada)
-        printHis(getHis(v))
+        #h, s, v = cv2.split(moedaIsolada)
+        #printHis(getHis(v))
         #cv2.waitKey(0)
 
     cv2.destroyAllWindows()
