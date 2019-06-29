@@ -24,7 +24,7 @@ def getHis(gray_img):
         for i in range(0, height):
             value = gray_img[j][i]
             histogram[value] += 1
-
+    histogram[0] = 0
     return histogram
 
 #retorna o pico do histograma
@@ -78,7 +78,7 @@ def getComponents(img_mask, img_color):
                             if (u + k) >= 0 and (u + k) < rows and (v + l) >= 0 and (v + l) < cols and img_mask[u + k][v + l] == -255:
                                 img_mask[u + k][v + l] = component.label
                                 linked.append((u + k, v + l))
-                                component.add_pixel(u, v, img_color[u + k][v + l])
+                                component.add_pixel(u+k, v+l, img_color[u + k][v + l])
 
 
                 component.crop()
@@ -199,19 +199,18 @@ if __name__ == "__main__":
     imshow(image, 'filtro-range', None)
 
     # Erosão e Dilatação
-    kernel = cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (4,4))  # kernel para erode dilate
+    kernel = cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (3,3))  # kernel para erode dilate
     image = cv2.erode(image, kernel, iterations = 5)
-    #image = cv2.dilate(image, kernel, iterations = 1)
+    image = cv2.dilate(image, kernel, iterations = 5)
     imshow(image, 'erodil', None)
 
     components = getComponents(image * -1, hsv)
 
     for component in components:
         moedaIsolada = component.pixels
-        imgTmp = moedaIsolada
-        #imgTmp = cv2.merge((moedaIsolada & H, moedaIsolada & S, moedaIsolada & V))
-        #imgTmp = cv2.cvtColor(imgTmp, cv2.COLOR_HSV2BGR) # volta para bgr pra poder exibir
-        imshow(imgTmp, 'aperte espaço')
+        imshow(moedaIsolada, 'aperte espaço')
+        h, s, v = cv2.split(moedaIsolada)
+        printHis(getHis(v))
         #cv2.waitKey(0)
 
     cv2.destroyAllWindows()

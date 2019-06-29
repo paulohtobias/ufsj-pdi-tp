@@ -22,5 +22,6 @@ class Moeda:
 		self.cor = cor
 
 moedas = [
-	moeda.Moeda(10, moeda.CorMoeda('hsv', [10, 75, 130], alcance=[8, 55, 100]))
+	Moeda(10, CorMoeda('hsv', [10, 75, 130], alcance=[8, 55, 100])),
+	Moeda(50, CorMoeda('hsv', [48, 30, 100], alcance=[40, 28, 50]))
 ]
