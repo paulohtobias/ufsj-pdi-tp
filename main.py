@@ -186,7 +186,8 @@ if __name__ == "__main__":
     image = cv2.dilate(image, kernel, iterations = 4)
     imshow(image, 'erodil', None)
 
-    components = sorted(cp.getComponents(image * -1, hsv), key=lambda c: c.area, reverse=True)
+    components = cp.getComponents(image * -1, hsv)
+
 
     for component in components:
         print(component)

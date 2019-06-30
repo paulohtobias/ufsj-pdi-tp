@@ -13,6 +13,7 @@ class Component:
 
 		self.pixels = np.zeros(img_shape, dtype=np.uint8)
 		self.area = 0
+		self.relative_area = 0.0
 
 		self.prata = 0.0
 		self.bronze = 0.0
@@ -57,32 +58,78 @@ class Component:
 		return total / float(range_img.shape[0] * range_img.shape[1])
 
 	def __str__(self):
-		return "Componente {} ({} pixels) - ({}% prata, {}% bronze)".format(self.label, self.area, self.prata * 100, self.bronze * 100)
+		return "(A: %5.2f%%) - (P: %5.2f%%, B: %5.2f%%)" % (self.relative_area * 100, self.prata * 100, self.bronze * 100)
+
+class ComponentGroup:
+	_level = 0
+	_maior = None
+
+	def __init__(self, component):
+		ComponentGroup._level += 1
+
+		self.level = ComponentGroup._level
+		self.components = [component]
+
+	def smaller_count(self):
+		return ComponentGroup._level - self.level
+
+	def calculate(self):
+		if self.level == 1:
+			ComponentGroup._maior = md.obter_maior_valor(self.components[0], self.smaller_count())
+
+			self.moeda = ComponentGroup._maior
+		else:
+			self.moeda = md.valor_por_proporcao(self.components[0], ComponentGroup._maior)
+
+		return self.moeda.valor * len(self.components)
+
 
 # Retorna uma lista de Componentes de uma imagem
 def getComponents(img_mask, img_color):
-    rows, cols = img_mask.shape
-    components = []
+	rows, cols = img_mask.shape
+	components = []
 
-    for i in range(rows):
-        for j in range(cols):
-            if img_mask[i][j] == -255:
-                component = Component(img_color.shape)
-                components.append(component)
+	for i in range(rows):
+		for j in range(cols):
+			if img_mask[i][j] == -255:
+				component = Component(img_color.shape)
+				components.append(component)
 
-                img_mask[i][j] = component.label
-                linked = [(i, j)]
-                component.add_pixel(i, j, img_color[i][j])
-                while len(linked) > 0:
-                    u, v = linked.pop()
-                    for k in range(-1, 2):
-                        for l in range(-1, 2):
-                            if (u + k) >= 0 and (u + k) < rows and (v + l) >= 0 and (v + l) < cols and img_mask[u + k][v + l] == -255:
-                                img_mask[u + k][v + l] = component.label
-                                linked.append((u + k, v + l))
-                                component.add_pixel(u+k, v+l, img_color[u + k][v + l])
+				img_mask[i][j] = component.label
+				linked = [(i, j)]
+				component.add_pixel(i, j, img_color[i][j])
+				while len(linked) > 0:
+					u, v = linked.pop()
+					for k in range(-1, 2):
+						for l in range(-1, 2):
+							if (u + k) >= 0 and (u + k) < rows and (v + l) >= 0 and (v + l) < cols and img_mask[u + k][v + l] == -255:
+								img_mask[u + k][v + l] = component.label
+								linked.append((u + k, v + l))
+								component.add_pixel(u+k, v+l, img_color[u + k][v + l])
 
 
-                component.crop()
+				component.crop()
 
-    return components
+	if len(components) == 0:
+		return []
+
+	components.sort(key=lambda c: c.area, reverse=True)
+
+	# Agrupando os componentes
+	component_groups = [ComponentGroup(components[0])]
+	cgi = 0
+
+	components[0].relative_area = 1.0
+	for i in range(1, len(components)):
+		prev = components[i - 1]
+		component = components[i]
+
+		component.relative_area = float(component.area) / float(components[0].area)
+
+		if prev.relative_area - component.relative_area < 0.04:
+			component_groups[cgi].components.append(components[i])
+		else:
+			cgi += 1
+			component_groups.append(ComponentGroup(components[i]))
+
+	return component_groups
