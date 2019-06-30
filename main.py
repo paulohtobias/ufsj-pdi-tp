@@ -188,8 +188,16 @@ if __name__ == "__main__":
 
     components = cp.getComponents(image * -1, hsv)
 
+    total = 0.0
+    for cg in components:
+        try:
+            cg_total = cg.calculate()
+            print("R$%.2f" % cg_total)
+            total += cg_total
+        except md.MoedaNFException as e:
+            print(e)
+            print(cg.level)
 
-    for component in components:
-        print(component)
+    print("Total: R$%.2f" % total)
 
     cv2.destroyAllWindows()
