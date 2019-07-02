@@ -73,9 +73,9 @@ class ComponentGroup:
 	def smaller_count(self):
 		return ComponentGroup._level - self.level
 
-	def calculate(self):
+	def calculate(self, moedaAbaixo=None):
 		if self.level == 1:
-			ComponentGroup._maior = md.obter_maior_valor(self.components[0], self.smaller_count())
+			ComponentGroup._maior = md.obter_maior_valor(self.components[0], self.smaller_count(), moedaAbaixo)
 
 			self.moeda = ComponentGroup._maior
 		else:
@@ -83,6 +83,9 @@ class ComponentGroup:
 
 		return self.moeda.valor * len(self.components)
 
+	# no caso de um único componente na imagem
+	def infer(self):
+		return md.infer(self.components[0]).valor * len(self.components)
 
 # Retorna uma lista de Componentes de uma imagem
 def getComponents(img_mask, img_color):
@@ -103,7 +106,7 @@ def getComponents(img_mask, img_color):
 					for k in range(-1, 2):
 						for l in range(-1, 2):
 							if (u + k) >= 0 and (u + k) < rows and (v + l) >= 0 and (v + l) < cols and img_mask[u + k][v + l] == -255:
-								img_mask[u + k][v + l] = component.label
+								img_mask[u + k][v + l] = 255
 								linked.append((u + k, v + l))
 								component.add_pixel(u+k, v+l, img_color[u + k][v + l])
 

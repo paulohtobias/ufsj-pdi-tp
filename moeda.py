@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 import numpy as np
 
 class Limiar():
@@ -27,7 +28,7 @@ class MoedaNFException(Exception):
 	def __init__(self):
 		super(MoedaNFException, self).__init__("Não foi possível identificar a moeda")
 
-def obter_maior_valor(componente, qtd_menores):
+def obter_maior_valor(componente, qtd_menores, componente_menor):
 	# Técnica avançada de IA.
 	if componente.prata >= 0.2:
 		if componente.bronze >= 0.2:
@@ -35,11 +36,10 @@ def obter_maior_valor(componente, qtd_menores):
 		else:
 			return Moeda(0.50)
 	elif componente.bronze >= 0.2:
-		if qtd_menores >= 2:
+		if qtd_menores >= 2 or componente_menor.prata >= 0.2 or componente_menor.relative_area <= 0.794:
 			return Moeda(0.25)
 		elif qtd_menores == 1:
-			# Consulta proporção
-			raise Exception("TODO: consulta proporção")
+			return Moeda(0.05)
 
 	raise MoedaNFException
 
@@ -93,11 +93,54 @@ __proporcao = {
 		}
 	]
 }
+
+__proporcao_cor = {
+	1.0:{
+			"prata": 0.2,
+			"bronze": 0.2
+	},
+	0.5:{
+			"prata": 0.4,
+			"bronze": 0
+	},
+	0.25:{
+			"prata": 0,
+			"bronze": 0.4
+	},
+	0.05:{
+			"prata": 0,
+			"bronze": 0.4
+	},
+	0.10:{
+			"prata": 0,
+			"bronze": 0.4
+	}
+}
+
 def valor_por_proporcao(componente, maior_moeda):
 	global __proporcao
-	for prop in __proporcao[maior_moeda.valor]:
-		if abs(componente.relative_area - prop["area_r"]) < 0.04:
-			return Moeda(prop["valor"])
+	
+	for i in range(1,3):
+		for prop in __proporcao[maior_moeda.valor]:
+			if abs(componente.relative_area - prop["area_r"]) < 0.05:
+				if __proporcao_cor[prop["valor"]]["prata"] <= componente.prata and __proporcao_cor[prop["valor"]]["bronze"] <= componente.bronze:
+					return Moeda(prop["valor"])
+
+				# segunda chance
+				if i == 2:
+					if __proporcao_cor[prop["valor"]]["prata"] > __proporcao_cor[prop["valor"]]["bronze"] and componente.prata > componente.bronze:
+						return Moeda(prop["valor"])
+					if __proporcao_cor[prop["valor"]]["prata"] < __proporcao_cor[prop["valor"]]["bronze"] and componente.prata < componente.bronze:
+						return Moeda(prop["valor"])
+	raise MoedaNFException
+
+def infer(self):
+	if self.prata > __proporcao_cor[1.0]["prata"] and self.bronze > __proporcao_cor[1.0]["bronze"]:
+		return Moeda(1.0)
+	
+	if self.prata > __proporcao_cor[0.5]["prata"] and self.bronze > __proporcao_cor[0.5]["bronze"]:
+		return Moeda(0.50)
+
 	raise MoedaNFException
 
 prata = CorMoeda('hsv', [48, 30, 100], alcance=[30, 29, 50])

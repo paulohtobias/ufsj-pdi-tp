@@ -172,31 +172,39 @@ if __name__ == "__main__":
     #imshow(bgr_img, "original", None)
 
     #bgr_img = averageFilter(bgr_img, (3,3))
-    imshow(bgr_img, 'média', None)
+    #imshow(bgr_img, 'média', None)
 
     # Conversão pra HSV.
     hsv = cv2.cvtColor(bgr_img, cv2.COLOR_BGR2HSV)
-
+    H, S, V = cv2.split(hsv)
     image = synthetic_removeBackground(hsv)
-    imshow(image, 'filtro-range', None)
+    imshow(image, 'filtro-range', None, False)
 
     # Erosão e Dilatação
     kernel = cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (3,3))  # kernel para erode dilate
     image = cv2.erode(image, kernel, iterations = 5)
     image = cv2.dilate(image, kernel, iterations = 4)
-    imshow(image, 'erodil', None)
-
-    components = cp.getComponents(image * -1, hsv)
+    imshow(image, 'erodil', None, False)
+    
+    components_group = cp.getComponents(image * -1, hsv)
 
     total = 0.0
-    for cg in components:
+    for i in range(0, len(components_group)):
         try:
-            cg_total = cg.calculate()
+            if components_group[i].level == 1:
+                if components_group[i].smaller_count() > 0:
+                    cg_total = components_group[i].calculate(components_group[i+1].components[0])
+                else:
+                    cg_total = components_group[i].infer()
+            else:
+                cg_total = components_group[i].calculate()
+            
             print("R$%.2f" % cg_total)
             total += cg_total
+
         except md.MoedaNFException as e:
             print(e)
-            print(cg.level)
+            print(components_group[i].level)
 
     print("Total: R$%.2f" % total)
 
